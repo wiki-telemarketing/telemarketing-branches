@@ -8,8 +8,8 @@
   <meta name="theme-color" content="#172633">
   <title>Справочник отделений · МГКЛ</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="./styles.css?v=osm-footer">
-  <script defer src="./app.js?v=osm-footer"></script>
+  <link rel="stylesheet" href="./styles.css?v=branch-acceptance">
+  <script defer src="./app.js?v=branch-acceptance"></script>
 </head>
 <body>
   <header class="topbar">
@@ -31,7 +31,10 @@
         <div id="filters" class="filters" aria-label="Статус отделения"></div>
         <div class="results-toolbar">
           <div id="list-label" class="list-label" aria-live="polite">Отделения</div>
-          <label class="type-filter"><span class="visually-hidden">Тип отделения</span><select id="branch-type"><option value="">Все типы</option></select></label>
+          <div class="result-filters">
+            <label class="type-filter"><span class="visually-hidden">Тип отделения</span><select id="branch-type"><option value="">Все типы</option></select></label>
+            <label class="type-filter"><span class="visually-hidden">Что принимают</span><select id="acceptance-filter"><option value="">Что принимают</option></select></label>
+          </div>
         </div>
       </div>
       <div id="list-area" class="list-area">

@@ -35,12 +35,12 @@ function addressKey(value) {
     .replace(/ +/g,' ').trim();
 }
 
-function readWorkbook(bytes) {
+function readWorkbook(bytes, sheetName = 'Переезды') {
   const docs = unzipSync(new Uint8Array(bytes), {filter: ({name, originalSize}) =>
     originalSize < 12_000_000 && /^xl\/(?:workbook|sharedStrings|styles|worksheets\/sheet1)\.xml$/.test(name)});
   const get = (name) => xml.parse(strFromU8(docs['xl/' + name + '.xml']));
   const sheets = many(get('workbook').workbook.sheets.sheet);
-  if (sheets.length !== 1 || sheets[0]['@name'] !== 'Переезды') throw new Error('unexpected workbook');
+  if (sheets.length !== 1 || sheets[0]['@name'] !== sheetName) throw new Error('unexpected workbook');
   const strings = many(docs['xl/sharedStrings.xml'] ? get('sharedStrings').sst.si : []).map(text);
   const style = get('styles').styleSheet;
   const fills = many(style.fills.fill);
@@ -56,6 +56,32 @@ function readWorkbook(bytes) {
     return {value: (col) => value(cells[col]), color};
   });
 }
+
+export function parseAcceptance(bytes) {
+  const [header,...rows] = readWorkbook(bytes,'Приём по отделениям');
+  const columns = ['A','B','C','D','E','F'];
+  const titles = ['Отделение','Адрес','Базовые категории','Расширенные категории','Источник','Проверено'];
+  if (columns.some((col,i) => header?.value(col) !== titles[i])) throw new Error('unexpected acceptance columns');
+  const categories = (s) => [...new Set(clean(s).split(/[;\r\n]+/).map((x) => publishable(x,150)).filter(Boolean))];
+  const accepted = new Map();
+  for (const {value} of rows) {
+    const name = publishable(value('A'),150);
+    const address = publishable(value('B'),350);
+    const basic = categories(value('C'));
+    const extra = categories(value('D'));
+    if (!name || !address || (!basic.length && !extra.length)) continue;
+    const url = clean(value('E'));
+    const source = /^https:\/\/(?:www\.)?mosgorlombard\.ru\/o-kompanii\/contacts\/[a-z0-9_-]+\/?$/i.test(url) ? url : '';
+    const date = clean(value('F')).replace(/^(\d{2})\.(\d{2})\.(\d{4})$/,'$3-$2-$1');
+    const checkedOn = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : '';
+    const key = branchKey({name,address});
+    if (accepted.has(key)) throw new Error('duplicate branch acceptance row');
+    accepted.set(key,{basic,extra,source,checkedOn});
+  }
+  return accepted;
+}
+
+export const branchKey = ({name,address}) => JSON.stringify([name,address]);
 
 function classify(note, color, dateLabel) {
   const s = normalize(note);

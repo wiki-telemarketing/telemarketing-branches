@@ -1,6 +1,6 @@
 import { build } from 'esbuild';
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
-import { parseDirectory } from './directory.mjs';
+import { branchKey, parseAcceptance, parseDirectory } from './directory.mjs';
 
 const input = process.env.MGKL_SOURCE_XLSX_URL;
 if (!input) throw new Error('MGKL_SOURCE_XLSX_URL is required.');
@@ -19,23 +19,36 @@ if (source.origin !== 'https://docs.google.com' ||
 }
 
 const limit = 3_000_000;
-let workbook;
-try {
-  const response = await fetch(source,{signal:AbortSignal.timeout(20_000),cache:'no-store'});
-  if (!response.ok || Number(response.headers.get('content-length')) > limit) throw new Error();
-  workbook = await response.arrayBuffer();
-  if (workbook.byteLength > limit) throw new Error();
-} catch {
-  throw new Error('Could not retrieve the directory from Google Sheets.');
+async function downloadSheet(url,title) {
+  try {
+    const response = await fetch(url,{signal:AbortSignal.timeout(20_000),cache:'no-store'});
+    if (!response.ok || Number(response.headers.get('content-length')) > limit) throw new Error();
+    const bytes = await response.arrayBuffer();
+    if (bytes.byteLength > limit) throw new Error();
+    return bytes;
+  } catch {
+    throw new Error('Could not retrieve the Google Sheets tab: '+title);
+  }
 }
 
-const [coordinates,stations] = await Promise.all(['coordinates','stations'].map(async (name) =>
-  JSON.parse(await readFile(name+'.json','utf8'))));
+const acceptanceSource = new URL(source);
+acceptanceSource.searchParams.set('gid','1327834426');
+const [workbook,acceptanceWorkbook,coordinates,stations] = await Promise.all([
+  downloadSheet(source,'Переезды'),downloadSheet(acceptanceSource,'Приём по отделениям'),
+  ...['coordinates','stations'].map(async (name) => JSON.parse(await readFile(name+'.json','utf8'))),
+]);
 let entries;
+let acceptedByBranch;
 try {
   entries = parseDirectory(workbook,coordinates);
+  acceptedByBranch = parseAcceptance(acceptanceWorkbook);
 } catch {
-  throw new Error('The source worksheet is missing, empty, or has an unexpected format.');
+  throw new Error('A source worksheet has an unexpected format.');
+}
+for (const item of entries) {
+  if (item.status !== 'active') continue;
+  const accepted = acceptedByBranch.get(branchKey(item));
+  if (accepted) item.accepted = accepted;
 }
 const data = {entries, stations, updatedAt:new Date().toISOString(),
   tileUrl:'https://tile.openstreetmap.org/{z}/{x}/{y}.png'};

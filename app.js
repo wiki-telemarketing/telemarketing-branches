@@ -27,7 +27,7 @@ const time = new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit',hour
 const mobile = matchMedia('(max-width:750px)');
 const storageKey = 'mgkl-snapshot-v2';
 const addressCache = new Map();
-const state = {entries:[], sorted:[], indexed:[], stations:[], results:[], status:'all', type:'',
+const state = {entries:[], sorted:[], indexed:[], stations:[], results:[], status:'all', type:'', acceptance:'',
   origin:null, detailId:null, suggestions:[], focused:-1, geocodeSerial:0, lastData:null, tileUrl:null};
 let map, tiles, cluster, originMarker, toastTimer, tileTimer;
 let markers = new Map();
@@ -96,7 +96,10 @@ function rankFields(fields, query) {
 }
 
 const field = (value,weight) => [norm(value),searchTerms(value),weight];
-const shown = (item) => (state.type === '' || item.type === state.type) &&
+const acceptedCategories = (item) => item.accepted ? [...item.accepted.basic,...item.accepted.extra] : [];
+const matchesFilters = (item) => (!state.type || item.type === state.type) &&
+  (!state.acceptance || acceptedCategories(item).includes(state.acceptance));
+const shown = (item) => matchesFilters(item) &&
   (state.status === 'all' || item.status === state.status);
 
 function computeResults() {
@@ -111,7 +114,7 @@ function computeResults() {
 
 function renderFilters() {
   const counts = Object.fromEntries(Object.keys(statusName).map((status) => [status,0]));
-  for (const item of state.entries) if (!state.type || state.type===item.type) counts[item.status]++;
+  for (const item of state.entries) if (matchesFilters(item)) counts[item.status]++;
   const statuses = ['all','active','moved','closed',...['planned','review'].filter((s) => counts[s] || state.status===s)];
   counts.all = Object.values(counts).reduce((a,b) => a+b,0);
   for (const old of $('filters').children) old.dataset.existing = 'true';
@@ -273,6 +276,32 @@ function history(item, visited = new Set(), depth = 0) {
   }).filter((s,i,all) => !all.slice(0,i).some((x) => x.name===s.name && x.date===s.date && x.category===s.category));
 }
 
+function renderAcceptance(accepted) {
+  const section = el('section','branch-acceptance');
+  section.append(el('h3','','Что принимает отделение'));
+  if (!accepted) {
+    section.append(el('p','','Категории для этого адреса пока не подтверждены.'));
+    return section;
+  }
+  for (const [title,items] of [['Базовые категории',accepted.basic],['Расширенные категории',accepted.extra]]) {
+    if (!items.length) continue;
+    const label = el('p');
+    label.append(el('strong','',title));
+    const list = el('ul');
+    list.append(...items.map((item) => el('li','',item)));
+    section.append(label,list);
+  }
+  if (accepted.source) {
+    const date = accepted.checkedOn ? ' · '+accepted.checkedOn.split('-').reverse().join('.') : '';
+    const source = el('a','','Данные Мосгорломбарда'+date);
+    source.href = accepted.source;
+    source.target = '_blank';
+    source.rel = 'noopener noreferrer';
+    section.append(source);
+  }
+  return section;
+}
+
 function renderDetails(item) {
   const details = $('details');
   const nav = el('div','detail-nav');
@@ -294,7 +323,8 @@ function renderDetails(item) {
   const steps = history(item);
   actions.append(button('action','Скопировать информацию',() => {
     copy([item.name,statusName[item.status],...fieldPairs.filter(([,value]) => value).map(([n,v]) => n+' — '+v),
-      ...steps.map((s) => [s.date,s.category,s.name,s.address].filter(Boolean).join(' · '))].join('\n'),'Информация скопирована');
+      ...steps.map((s) => [s.date,s.category,s.name,s.address].filter(Boolean).join(' · ')),
+      ...acceptedCategories(item)].join('\n'),'Информация скопирована');
   },'copy'));
   if (item.address && item.status==='active') {
     const route = el('a','action primary-action');
@@ -328,6 +358,7 @@ function renderDetails(item) {
     details.append(moves);
   }
   if (goodsMoves) details.append(fields,actions);
+  if (item.status==='active') details.append(renderAcceptance(item.accepted));
   if (item.status==='review') details.append(el('p','empty','В таблице требуется уточнить статус отделения.'));
   if (item.address) {
     const extra = el('div','nearby-action');
@@ -519,6 +550,17 @@ function resetMap() {
   else map.setView([55.751,37.62],10);
 }
 
+function setFilterOptions(id,placeholder,choices,value) {
+  const select = $(id);
+  select.replaceChildren(...['',...choices].map((choice) => {
+    const option = el('option','',choice || placeholder);
+    option.value = choice;
+    return option;
+  }));
+  select.value = choices.includes(value) ? value : '';
+  return select.value;
+}
+
 function ingest(data) {
   const previous = state.entries.find((item) => item.id===state.detailId);
   const first = !state.lastData;
@@ -531,13 +573,9 @@ function ingest(data) {
     ...item.steps.flatMap((s) => [field(s.name,12),field(s.address,14)]),
   ]}));
   const types = [...new Set(state.entries.map((item) => item.type))].sort(locale.compare);
-  if (!types.includes(state.type)) state.type = '';
-  $('branch-type').replaceChildren(...[['','Все типы'],...types.map((type) => [type,type])].map(([value,label]) => {
-    const option = el('option','',label);
-    option.value = value;
-    return option;
-  }));
-  $('branch-type').value = state.type;
+  const categories = [...new Set(state.entries.flatMap(acceptedCategories))].sort(locale.compare);
+  state.type = setFilterOptions('branch-type','Все типы',types,state.type);
+  state.acceptance = setFilterOptions('acceptance-filter','Что принимают',categories,state.acceptance);
   if (previous) {
     const current = data.entries.find((item) => item.name===previous.name && item.address===previous.address && item.type===previous.type);
     if (current) {state.detailId=current.id;renderDetails(current);}
@@ -621,11 +659,19 @@ $('search-form').addEventListener('submit',(event) => {
 $('clear').addEventListener('click',() => {$('search').value='';resetInput();hideSuggestions();$('search').focus();});
 document.addEventListener('pointerdown',(event) => {if (!$('search-form').contains(event.target)) hideSuggestions();});
 $('branch-type').addEventListener('change',() => {state.type=$('branch-type').value;showResults();render();});
+$('acceptance-filter').addEventListener('change',() => {
+  state.acceptance=$('acceptance-filter').value;
+  if (state.acceptance) state.status='active';
+  showResults();
+  render();
+});
 $('reset-map').addEventListener('click',() => {
   $('search').value='';
   state.status='all';
   state.type='';
+  state.acceptance='';
   $('branch-type').value='';
+  $('acceptance-filter').value='';
   resetInput();
   resetMap();
 });
