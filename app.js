@@ -270,11 +270,15 @@ function history(item, visited = new Set(), depth = 0) {
   const steps = item.steps.filter((s) => s.category || !item.steps.some((x) => x.category && (x.id ? x.id===s.id : x.name===s.name)));
   return steps.flatMap((s) => {
     const target = s.id && state.entries.find(({id}) => id===s.id);
-    const details = target && target.status==='moved' && !steps.some((later) => target.steps.some((next) =>
+    const details = !s.pending && target?.status==='moved' && !steps.some((later) => target.steps.some((next) =>
       later !== s && later.id && later.id === next.id && (later.date === next.date || !next.date)));
     return [s,...(details ? history(target,path,depth+1) : [])];
-  }).filter((s,i,all) => !all.slice(0,i).some((x) => x.name===s.name && x.date===s.date && x.category===s.category));
+  }).filter((s,i,all) => !all.slice(0,i).some((x) => x.name===s.name && x.date===s.date &&
+    x.category===s.category && x.pending===s.pending));
 }
+
+const moveDate = (step) => step.pending ? 'Запланировано на '+step.date : step.date;
+const moveDestination = (step) => step.name || 'Отделение назначения пока неизвестно';
 
 function renderAcceptance(accepted) {
   const section = el('section','branch-acceptance');
@@ -323,7 +327,7 @@ function renderDetails(item) {
   const steps = history(item);
   actions.append(button('action','Скопировать информацию',() => {
     copy([item.name,statusName[item.status],...fieldPairs.filter(([,value]) => value).map(([n,v]) => n+' — '+v),
-      ...steps.map((s) => [s.date,s.category,s.name,s.address].filter(Boolean).join(' · ')),
+      ...steps.map((s) => [s.category,moveDate(s),moveDestination(s),s.address].filter(Boolean).join(' · ')),
       ...acceptedCategories(item)].join('\n'),'Информация скопирована');
   },'copy'));
   if (item.address && item.status==='active') {
@@ -339,18 +343,19 @@ function renderDetails(item) {
   if (item.goldLetterRequired) {
     details.append(el('p','gold-letter-notice','По золоту нужно написать письмо'));
   }
-  const goodsMoves = item.status==='moved' && steps.some((step) => /техник|мехов/i.test(step.category));
+  const goodsMoves = item.status==='moved' && steps.some((step) =>
+    step.pending || /техник|мехов|текстиль|^залоги, кроме/i.test(step.category));
   if (!goodsMoves) details.append(fields,actions);
   if (steps.length) {
     const moves = el('section',goodsMoves ? 'history goods-history' : 'history');
-    const heading = goodsMoves ? 'Куда переехали залоги'
+    const heading = goodsMoves ? 'Распределение залогов'
       : item.status==='planned' ? 'Куда планируется переезд' : 'История переезда';
     moves.append(el('h3','',heading));
     for (const s of steps) {
-      const step = el('div','step');
-      const note = [s.date,s.category].filter(Boolean).join(' · ');
+      const step = el('div',s.pending ? 'step step-pending' : 'step');
+      const note = [s.category,moveDate(s)].filter(Boolean).join(' · ');
       if (note) step.append(el('div','step-note',note));
-      step.append(el('span','step-heading',s.name));
+      step.append(el('span','step-heading',moveDestination(s)));
       if (s.address) step.append(el('p','',s.address));
       if (s.id) step.append(button('text-action','Открыть карточку',() => select(s.id)));
       moves.append(step);

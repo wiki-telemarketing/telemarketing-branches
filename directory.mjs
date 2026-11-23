@@ -103,15 +103,24 @@ function relocationSteps(note, date) {
   for (const line of note.split(/\r?\n/)) {
     const lineDate = line.match(/\b\d{1,2}\.\d{1,2}\.\d{2,4}\b/)?.[0];
     if (lineDate) currentDate = lineDate;
-    const kind = /мех|техник|ювелир|витрина|залоги/i.exec(line);
-    const category = kind?.index === undefined ? '' : /^мех/i.test(kind[0])
+    const exception = /^\s*(Залоги, кроме (?:текстиля|техники))\s+[-–—]/i.exec(line)?.[1];
+    const kind = /мех|техник|ювелир|витрина|^\s*(?:\d+\.\s*)?текстиль|залоги/i.exec(line);
+    const category = exception ?? (kind?.index === undefined ? '' : /^мех/i.test(kind[0])
       ? (/техник/i.test(line) ? 'Меховые изделия и техника' : 'Меховые изделия')
       : /^ювелир/i.test(kind[0]) ? (/техник/i.test(line) ? 'Ювелирные изделия и техника' : 'Ювелирные изделия')
-      : /^витрина/i.test(kind[0]) ? 'Витрина' : /^техник/i.test(kind[0]) ? 'Техника' : 'Залоги';
+      : /^витрина/i.test(kind[0]) ? 'Витрина' : /^техник/i.test(kind[0]) ? 'Техника'
+      : /текстиль/i.test(kind[0]) ? 'Текстиль' : 'Залоги');
     let part = line.replace(/^\s*\d+\.\s+(?=[а-я])/i, '').trim();
     const hasDestination = /(?:переезд|переехал)/i.test(part) || /^.+?\s+[–—-]\s+/.test(part);
     if (!hasDestination || /возможен переезд|под вопросом/.test(part.toLowerCase())) continue;
+    const plan = /\s[-–—]\s+запланировано на\s+\d{1,2}\.\d{1,2}\.\d{2,4}/i.exec(part);
+    const pending = Boolean(category && plan);
+    if (pending) part = part.slice(plan.index + plan[0].length).trim();
     const lo = part.match(/(?:^|\s)(?:в|на)\s+(?:ЛО\s+)?(?=[а-я0-9])/i);
+    if (pending && !lo) {
+      steps.push({name:'',address:'',date:lineDate,category,pending:true});
+      continue;
+    }
     if (lo) part = part.slice(lo.index + lo[0].length);
     else if (/^.+?\s+[–—-]\s+/.test(part)) part = part.replace(/^.+?\s+[–—-]\s+/, '');
     else continue;
@@ -128,7 +137,7 @@ function relocationSteps(note, date) {
     for (const chunk of head.split(/\s*\/\s*/)) {
       const name = publishable(chunk, 90);
       if (!name || !/^(?:[а-яё0-9][а-яё0-9 .()–—-]{1,88})$/i.test(name) || /пишем|письмо|звонить|ранее|уточн/i.test(name)) continue;
-      steps.push({name, address, date: currentDate, category});
+      steps.push({name, address, date: currentDate, category, ...(pending && {pending:true})});
     }
   }
   return steps;
@@ -167,6 +176,7 @@ export function parseDirectory(bytes, coordinates = {}) {
   }
   for (const item of entries) {
     for (const step of item.steps) {
+      if (!step.name) continue;
       const keys = [normalize(step.name), locationName(step.name.replace(/\([^()]+\)/g, ''))];
       const candidates = (targets.get(keys[0]) ?? targets.get(keys[1]) ?? []).filter(({id}) => id !== item.id);
       const key = step.address && addressKey(step.address);
@@ -180,7 +190,7 @@ export function parseDirectory(bytes, coordinates = {}) {
     }
     item.steps = item.steps.filter((step, i, all) =>
       !all.slice(0,i).some((a) => a.id === step.id && a.name === step.name && a.date === step.date &&
-        a.category === step.category && a.address === step.address));
+        a.category === step.category && a.address === step.address && a.pending === step.pending));
   }
   return entries;
 }
