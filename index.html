@@ -42,7 +42,16 @@
     </section>
     <section class="map-panel" id="map-panel" aria-label="Карта отделений">
       <div id="map" class="map"></div>
-      <div class="map-header"><div><strong id="map-title">Действующие отделения</strong><small id="map-info">Загрузка карты</small></div><button class="map-action" id="reset-map" type="button">Все на карте</button></div>
+      <div class="map-header">
+        <div>
+          <strong id="map-title">Действующие отделения</strong>
+          <small id="map-info">Загрузка карты</small>
+        </div>
+        <div class="map-header-actions">
+          <button class="map-action" id="reset-map" type="button">Все на карте</button>
+          <a class="map-attribution" href="https://www.openstreetmap.org/copyright" lang="en">© OpenStreetMap</a>
+        </div>
+      </div>
       <div class="map-key"><span class="key-dot"></span>Действует <span id="origin-key" hidden><span class="origin-dot"></span>Точка поиска</span></div>
       <div id="map-error" class="map-error" role="status" hidden>Подложка карты недоступна</div>
     </section>
