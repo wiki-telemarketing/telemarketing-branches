@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#172633">
+  <title>Справочник отделений · МГКЛ</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./styles.css">
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">М</span><div><span class="brand-name">МГКЛ</span><span class="brand-label">Контакт-центр</span></div></div>
+    <div class="sync-wrap"><span id="sync" class="sync" role="status"><span class="sync-dot"></span>Загрузка данных</span><button id="refresh" class="icon-button refresh" type="button" aria-label="Проверить обновления" title="Проверить обновления"></button></div>
+  </header>
+  <main class="workspace">
+    <section class="directory" aria-label="Справочник отделений">
+      <div class="directory-head">
+        <h1>Отделения</h1>
+        <form id="search-form" class="search-form" role="search" autocomplete="off">
+          <label class="visually-hidden" for="search">Отделение, улица, адрес или метро</label>
+          <span id="search-icon" class="search-icon" aria-hidden="true"></span>
+          <input id="search" type="search" placeholder="Отделение, улица или метро" aria-controls="suggestions" aria-expanded="false" role="combobox">
+          <button id="clear" class="icon-button clear" type="button" aria-label="Очистить поиск" hidden></button>
+          <button type="submit" class="search-submit">Найти</button>
+          <div id="suggestions" class="suggestions" role="listbox" aria-label="Подсказки" hidden></div>
+        </form>
+        <div id="filters" class="filters" aria-label="Статус отделения"></div>
+        <div class="results-toolbar">
+          <div id="list-label" class="list-label" aria-live="polite">Отделения</div>
+          <label class="type-filter"><span class="visually-hidden">Тип отделения</span><select id="branch-type"><option value="">Все типы</option></select></label>
+        </div>
+      </div>
+      <div id="list-area" class="list-area">
+        <div id="geocode-results" class="geocode-results" hidden></div>
+        <div id="results" class="results" aria-label="Результаты поиска"></div>
+      </div>
+      <section id="details" class="details" aria-label="Карточка отделения" hidden></section>
+    </section>
+    <section class="map-panel" id="map-panel" aria-label="Карта отделений">
+      <div id="map" class="map"></div>
+      <div class="map-header"><div><strong id="map-title">Действующие отделения</strong><small id="map-info">Загрузка карты</small></div><button class="map-action" id="reset-map" type="button">Все на карте</button></div>
+      <div class="map-key"><span class="key-dot"></span>Действует <span id="origin-key" hidden><span class="origin-dot"></span>Точка поиска</span></div>
+      <div id="map-error" class="map-error" role="status" hidden>Подложка карты недоступна</div>
+    </section>
+  </main>
+  <div class="mobile-nav" aria-label="Вид на телефоне">
+    <button id="list-tab" type="button" aria-pressed="true">Список</button>
+    <button id="map-tab" type="button" aria-pressed="false">Карта</button>
+  </div>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

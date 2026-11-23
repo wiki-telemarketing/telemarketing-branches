@@ -1,0 +1,22 @@
+{
+  "name": "telemarketing-branches",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "build": "node build-pages.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "fast-xml-parser": "5.12.1",
+    "fflate": "0.8.3",
+    "leaflet": "1.9.4",
+    "leaflet.markercluster": "1.5.3"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  },
+  "private": true
+}
