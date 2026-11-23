@@ -160,11 +160,14 @@ export function parseDirectory(bytes, coordinates = {}) {
       /(?:ювелирные изделия|по золоту)\s*[:–—-]?\s*(?:пишем|(?:нужно|необходимо)\s+(?:писать|написать|отправить))\s+письмо(?:[.,;! ]|$)/i.test(line.trim()));
     const date = note.match(/\b\d{1,2}\.\d{1,2}\.\d{2,4}\b/)?.[0] ?? '';
     const status = classify(note, color, date);
-    const point = status === 'active' ? coordinates[address]?.point ?? null : null;
+    const location = status === 'active' ? coordinates[address] : undefined;
+    const point = location?.point ?? null;
+    const mapAddress = publishable(location?.mapAddress, 350);
     const metro = publishable(value('E'), 120);
     const hours = status === 'active' || status === 'planned' ? publishable(value('D'), 120) : '';
     const steps = ['moved', 'planned'].includes(status) ? relocationSteps(note, date) : [];
-    entries.push({id: String(entries.length + 1), name, address, metro, hours, type, status, date, point, steps, goldLetterRequired});
+    entries.push({id: String(entries.length + 1), name, address, metro, hours, type, status, date, point, steps,
+      goldLetterRequired, ...(point && mapAddress && {mapAddress})});
   }
   if (!hasHeader || !entries.length) throw new Error('unexpected directory columns or empty directory');
   const targets = new Map();

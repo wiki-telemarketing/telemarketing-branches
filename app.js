@@ -146,7 +146,7 @@ function resultRow(item, distance) {
   const title = el('span','result-title');
   title.append(el('span','result-name',item.name),badge(item.status));
   row.append(title);
-  if (item.address) row.append(el('span','result-address',item.address));
+  if (item.address) row.append(el('span','result-address',item.mapAddress || item.address));
   const meta = el('span','result-meta');
   for (const [value,icon] of [[distance===undefined ? '' : formatDistance(distance),'pin'],[item.metro,'train'],[item.hours,'time']]) {
     if (!value) continue;
@@ -202,7 +202,7 @@ function showSuggestions() {
   const branches = state.results.slice(0,stations.length ? 3 : 6);
   state.suggestions = [
     ...stations.map((s) => ({title:s.name, description:s.line+' · ближайшие отделения', icon:'train', chosen:() => chooseOrigin(s)})),
-    ...branches.map(({item}) => ({title:item.name, description:item.address, icon:'pin', chosen:() => select(item.id)})),
+    ...branches.map(({item}) => ({title:item.name, description:item.mapAddress || item.address, icon:'pin', chosen:() => select(item.id)})),
     ...(query.length >= 4 ? [{title:'Найти адрес на карте',description:query,icon:'search',chosen:() => lookup(query)}] : []),
   ];
   const options = state.suggestions.map((s,index) => {
@@ -313,8 +313,9 @@ function renderDetails(item) {
   nav.append(badge(item.status));
   const title = el('h2','detail-title',item.name);
   const fields = el('dl','fields');
-  const fieldPairs = [[item.status==='moved' || item.status==='closed' ? 'Прежний адрес' : 'Адрес',item.address],
-    ['Метро / ж. д.',item.metro],['Режим работы',item.hours],['Тип',item.type]];
+  const addressFields = item.mapAddress ? [['Адрес на карте',item.mapAddress],['Адрес в таблице',item.address]]
+    : [[item.status==='moved' || item.status==='closed' ? 'Прежний адрес' : 'Адрес',item.address]];
+  const fieldPairs = [...addressFields,['Метро / ж. д.',item.metro],['Режим работы',item.hours],['Тип',item.type]];
   if (item.date && ['moved','planned'].includes(item.status)) fieldPairs.push(['Дата переезда',item.date]);
   for (const [name,value] of fieldPairs) {
     if (!value) continue;
@@ -323,7 +324,7 @@ function renderDetails(item) {
     fields.append(field);
   }
   const actions = el('div','detail-actions');
-  if (item.address) actions.append(button('action','Скопировать адрес',() => copy(item.address,'Адрес скопирован'),'copy'));
+  if (item.address) actions.append(button('action','Скопировать адрес',() => copy(item.mapAddress || item.address,'Адрес скопирован'),'copy'));
   const steps = history(item);
   actions.append(button('action','Скопировать информацию',() => {
     copy([item.name,statusName[item.status],...fieldPairs.filter(([,value]) => value).map(([n,v]) => n+' — '+v),
@@ -370,7 +371,7 @@ function renderDetails(item) {
     if (!item.point && item.status==='active') extra.append(el('p','step-note','Для этого адреса нет проверенной точки на карте.'));
     extra.append(button('text-action','Ближайшие к этому адресу',() => {
       state.status = 'all';
-      if (item.point) chooseOrigin({name:item.address,point:item.point});
+      if (item.point) chooseOrigin({name:item.mapAddress || item.address,point:item.point});
       else {
         showResults();
         $('search').value = item.address.replace(/\s+/g,' ');
@@ -575,6 +576,7 @@ function ingest(data) {
   state.sorted = [...data.entries].sort((a,b) => statusOrder.indexOf(a.status)-statusOrder.indexOf(b.status)||locale.compare(a.name,b.name));
   state.indexed = state.sorted.map((item) => ({item,fields:[
     field(item.name,0),field(item.address,4),field(item.metro,2),
+    ...(item.mapAddress ? [field(item.mapAddress,4)] : []),
     ...item.steps.flatMap((s) => [field(s.name,12),field(s.address,14)]),
   ]}));
   const types = [...new Set(state.entries.map((item) => item.type))].sort(locale.compare);
