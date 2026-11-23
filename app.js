@@ -435,10 +435,11 @@ function resetInput() {
 
 function buildMap(tileUrl) {
   if (map) return;
-  map = L.map('map',{zoomControl:false,attributionControl:false,scrollWheelZoom:true}).setView([55.751,37.62],10);
+  map = L.map('map',{zoomControl:false,scrollWheelZoom:true}).setView([55.751,37.62],10);
+  map.attributionControl.setPrefix(false);
   L.control.zoom({position:'bottomright',zoomInTitle:'Приблизить',zoomOutTitle:'Отдалить'}).addTo(map);
   tiles = L.tileLayer(tileUrl,{
-    maxZoom:19,
+    maxZoom:19, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" lang="en">OpenStreetMap</a>',
     referrerPolicy:'strict-origin-when-cross-origin',
   }).addTo(map);
   tiles.on('tileerror',() => {
