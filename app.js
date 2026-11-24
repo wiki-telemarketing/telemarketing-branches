@@ -15,9 +15,9 @@ const icons = {
   route:svg('<path d="M7 5h8a3.5 3.5 0 1 1 0 7H9a3.5 3.5 0 1 0 0 7h8"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="19" r="2"/>'),
 };
 const $ = (id) => document.getElementById(id);
-const statusName = {active:'Действует',moved:'Переехало',closed:'Закрыто',planned:'Планируется переезд',review:'Уточнить статус'};
-const filterLabels = {all:'Все',active:'Действующие',moved:'Переехавшие',closed:'Закрытые',planned:'Планируется',review:'Уточнить'};
-const statusOrder = ['active','moved','planned','review','closed'];
+const statusName = {active:'Действует',moved:'Переехало',suspended:'Работа приостановлена',closed:'Закрыто',planned:'Планируется переезд',review:'Уточнить статус'};
+const filterLabels = {all:'Все',active:'Действующие',moved:'Переехавшие',suspended:'Временно не работают',closed:'Закрытые',planned:'Планируется',review:'Уточнить'};
+const statusOrder = ['active','moved','planned','suspended','review','closed'];
 const norm = (s) => String(s ?? '').normalize('NFKC').toLowerCase().replaceAll('ё','е')
   .replace(/[^а-яa-z0-9]+/g,' ').trim();
 const searchTerms = (s) => norm(s).split(' ').filter((t) => t && !['ул','улица','д','дом','м','метро','г','город','ло'].includes(t));
@@ -115,7 +115,7 @@ function computeResults() {
 function renderFilters() {
   const counts = Object.fromEntries(Object.keys(statusName).map((status) => [status,0]));
   for (const item of state.entries) if (matchesFilters(item)) counts[item.status]++;
-  const statuses = ['all','active','moved','closed',...['planned','review'].filter((s) => counts[s] || state.status===s)];
+  const statuses = ['all','active','moved','closed',...['suspended','planned','review'].filter((s) => counts[s] || state.status===s)];
   counts.all = Object.values(counts).reduce((a,b) => a+b,0);
   for (const old of $('filters').children) old.dataset.existing = 'true';
   for (const status of statuses) {
@@ -329,7 +329,7 @@ function renderDetails(item) {
   actions.append(button('action','Скопировать информацию',() => {
     copy([item.name,statusName[item.status],...fieldPairs.filter(([,value]) => value).map(([n,v]) => n+' — '+v),
       ...steps.map((s) => [s.category,moveDate(s),moveDestination(s),s.address].filter(Boolean).join(' · ')),
-      ...acceptedCategories(item)].join('\n'),'Информация скопирована');
+      ...acceptedCategories(item),item.customerNotice].filter(Boolean).join('\n'),'Информация скопирована');
   },'copy'));
   if (item.address && item.status==='active') {
     const route = el('a','action primary-action');
@@ -341,6 +341,12 @@ function renderDetails(item) {
     actions.append(route);
   }
   details.replaceChildren(nav,title);
+  if (item.customerNotice) {
+    const notice = el('section','customer-notice');
+    notice.append(el('h3','','Сообщение для клиентов'));
+    for (const paragraph of item.customerNotice.split(/\r?\n\s*\r?\n/)) notice.append(el('p','',paragraph));
+    details.append(notice);
+  }
   if (item.goldLetterRequired) {
     details.append(el('p','gold-letter-notice','По золоту нужно написать письмо'));
   }

@@ -69,13 +69,17 @@ h1{font-size:clamp(1.9rem,3vw,2.45rem);letter-spacing:-.055em;line-height:1.12;m
 .status{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;border-radius:6px;font-size:.76rem;font-weight:670;padding:3px 6px;line-height:1.18;background:#edf0f3;color:#465665}
 .status:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
 .status.active{background:#e5f3eb;color:#23623e}
-.status.moved,.status.planned{background:#fff0dc;color:#8a4b08}
+.status.moved,.status.planned,.status.suspended{background:#fff0dc;color:#8a4b08}
 .status.closed{background:#f7e5e6;color:#922e34}
 .details{padding:13px 17px 28px 24px}
 .detail-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:13px}
 .back,.text-action{padding:5px 0;background:none;border:0;color:var(--accent-dark);font-weight:680;text-align:left}
 .detail-title{font-size:1.55rem;line-height:1.15;letter-spacing:-.025em;overflow-wrap:anywhere;margin:9px 0 16px}
 .gold-letter-notice{background:#fcebed;color:#982e37;border-left:3px solid #b43a43;border-radius:7px;padding:10px 12px;margin:0 0 14px;font-size:.93rem;font-weight:720}
+.customer-notice{background:#fff7e9;border-left:3px solid #af7429;border-radius:7px;padding:12px;margin:0 0 14px}
+.customer-notice h3{font-size:.98rem;margin:0 0 8px}
+.customer-notice p{font-size:.92rem;line-height:1.45;margin:0 0 8px}
+.customer-notice p:last-child{margin-bottom:0}
 .fields{display:grid;gap:12px;margin:0}
 .fields div{padding:0 0 10px;border-bottom:1px solid var(--line)}
 .fields dt,.step-note{font-size:.82rem;font-weight:630;color:var(--muted)}
