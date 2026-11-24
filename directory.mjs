@@ -104,8 +104,9 @@ function relocationSteps(note, date) {
     const lineDate = line.match(/\b\d{1,2}\.\d{1,2}\.\d{2,4}\b/)?.[0];
     if (lineDate) currentDate = lineDate;
     const exception = /^\s*(Залоги, кроме (?:текстиля|техники))\s+[-–—]/i.exec(line)?.[1];
+    const gold = /^\s*(?:\d+\.\s*)?(Золото(?: и техника)?)\s+[-–—]/i.exec(line)?.[1];
     const kind = /мех|техник|ювелир|витрина|^\s*(?:\d+\.\s*)?текстиль|залоги/i.exec(line);
-    const category = exception ?? (kind?.index === undefined ? '' : /^мех/i.test(kind[0])
+    const category = exception ?? gold ?? (kind?.index === undefined ? '' : /^мех/i.test(kind[0])
       ? (/техник/i.test(line) ? 'Меховые изделия и техника' : 'Меховые изделия')
       : /^ювелир/i.test(kind[0]) ? (/техник/i.test(line) ? 'Ювелирные изделия и техника' : 'Ювелирные изделия')
       : /^витрина/i.test(kind[0]) ? 'Витрина' : /^техник/i.test(kind[0]) ? 'Техника'
@@ -157,9 +158,10 @@ export function parseDirectory(bytes, coordinates = {}) {
     const address = publishable(value('F'), 350);
     const comment = clean(value('G'));
     const noticeSection = /^(?:Сообщение для клиентов(?: \(([^)\r\n]+)\))?:|(По [^\r\n]{1,95} сообщаем:))[ \t]*\r?\n([\s\S]*?)\r?\n\r?\nСлужебно:[ \t]*\r?\n/i.exec(comment);
-    const customerNotice = publishable(noticeSection?.[3], 2000);
-    const customerNoticeCategory = publishable(noticeSection?.[1] ?? noticeSection?.[2], 120);
-    const note = noticeSection ? comment.slice(noticeSection[0].length) : comment;
+    const noticeAfterGoldInstruction = /^(Ювелирные изделия: пишем письмо)\r?\n\r?\n(Меховые и кожаные изделия|Меховые изделия и техника):[ \t]*\r?\n(Добрый день![\s\S]*?Благодарим Вас за терпение и понимание!)$/i.exec(comment);
+    const customerNotice = publishable(noticeSection?.[3] ?? noticeAfterGoldInstruction?.[3], 2000);
+    const customerNoticeCategory = publishable(noticeSection?.[1] ?? noticeSection?.[2] ?? noticeAfterGoldInstruction?.[2], 120);
+    const note = noticeSection ? comment.slice(noticeSection[0].length) : noticeAfterGoldInstruction?.[1] ?? comment;
     const goldLetterRequired = note.split(/\r?\n/).some((line) =>
       /(?:ювелирные изделия|по золоту)\s*[:–—-]?\s*(?:пишем|(?:нужно|необходимо)\s+(?:писать|написать|отправить))\s+письмо(?:[.,;! ]|$)/i.test(line.trim()));
     const date = note.match(/\b\d{1,2}\.\d{1,2}\.\d{2,4}\b/)?.[0] ?? '';
