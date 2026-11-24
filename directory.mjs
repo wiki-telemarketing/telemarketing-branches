@@ -156,9 +156,9 @@ export function parseDirectory(bytes, coordinates = {}) {
     if (!name) continue;
     const address = publishable(value('F'), 350);
     const comment = clean(value('G'));
-    const noticeSection = /^Сообщение для клиентов(?: \(([^)\r\n]+)\))?:[ \t]*\r?\n([\s\S]*?)\r?\n\r?\nСлужебно:[ \t]*\r?\n/i.exec(comment);
-    const customerNotice = publishable(noticeSection?.[2], 2000);
-    const customerNoticeCategory = publishable(noticeSection?.[1], 120);
+    const noticeSection = /^(?:Сообщение для клиентов(?: \(([^)\r\n]+)\))?:|(По [^\r\n]{1,95} сообщаем:))[ \t]*\r?\n([\s\S]*?)\r?\n\r?\nСлужебно:[ \t]*\r?\n/i.exec(comment);
+    const customerNotice = publishable(noticeSection?.[3], 2000);
+    const customerNoticeCategory = publishable(noticeSection?.[1] ?? noticeSection?.[2], 120);
     const note = noticeSection ? comment.slice(noticeSection[0].length) : comment;
     const goldLetterRequired = note.split(/\r?\n/).some((line) =>
       /(?:ювелирные изделия|по золоту)\s*[:–—-]?\s*(?:пишем|(?:нужно|необходимо)\s+(?:писать|написать|отправить))\s+письмо(?:[.,;! ]|$)/i.test(line.trim()));
