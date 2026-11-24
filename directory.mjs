@@ -156,8 +156,9 @@ export function parseDirectory(bytes, coordinates = {}) {
     if (!name) continue;
     const address = publishable(value('F'), 350);
     const comment = clean(value('G'));
-    const noticeSection = /^Сообщение для клиентов:[ \t]*\r?\n([\s\S]*?)\r?\n\r?\nСлужебно:[ \t]*\r?\n/i.exec(comment);
-    const customerNotice = publishable(noticeSection?.[1], 2000);
+    const noticeSection = /^Сообщение для клиентов(?: \(([^)\r\n]+)\))?:[ \t]*\r?\n([\s\S]*?)\r?\n\r?\nСлужебно:[ \t]*\r?\n/i.exec(comment);
+    const customerNotice = publishable(noticeSection?.[2], 2000);
+    const customerNoticeCategory = publishable(noticeSection?.[1], 120);
     const note = noticeSection ? comment.slice(noticeSection[0].length) : comment;
     const goldLetterRequired = note.split(/\r?\n/).some((line) =>
       /(?:ювелирные изделия|по золоту)\s*[:–—-]?\s*(?:пишем|(?:нужно|необходимо)\s+(?:писать|написать|отправить))\s+письмо(?:[.,;! ]|$)/i.test(line.trim()));
@@ -171,7 +172,8 @@ export function parseDirectory(bytes, coordinates = {}) {
     const hours = status === 'active' || status === 'planned' ? publishable(value('D'), 120) : '';
     const steps = ['moved', 'planned'].includes(status) ? relocationSteps(note, date) : [];
     entries.push({id: String(entries.length + 1), name, address, metro, hours, type, status, date, point, steps,
-      goldLetterRequired, ...(point && mapAddress && {mapAddress}), ...(customerNotice && {customerNotice})});
+      goldLetterRequired, ...(point && mapAddress && {mapAddress}),
+      ...(customerNotice && {customerNotice, ...(customerNoticeCategory && {customerNoticeCategory})})});
   }
   if (!hasHeader || !entries.length) throw new Error('unexpected directory columns or empty directory');
   const targets = new Map();

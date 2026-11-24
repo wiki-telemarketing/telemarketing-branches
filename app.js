@@ -329,7 +329,7 @@ function renderDetails(item) {
   actions.append(button('action','Скопировать информацию',() => {
     copy([item.name,statusName[item.status],...fieldPairs.filter(([,value]) => value).map(([n,v]) => n+' — '+v),
       ...steps.map((s) => [s.category,moveDate(s),moveDestination(s),s.address].filter(Boolean).join(' · ')),
-      ...acceptedCategories(item),item.customerNotice].filter(Boolean).join('\n'),'Информация скопирована');
+      ...acceptedCategories(item),item.customerNoticeCategory,item.customerNotice].filter(Boolean).join('\n'),'Информация скопирована');
   },'copy'));
   if (item.address && item.status==='active') {
     const route = el('a','action primary-action');
@@ -341,14 +341,15 @@ function renderDetails(item) {
     actions.append(route);
   }
   details.replaceChildren(nav,title);
+  if (item.goldLetterRequired) {
+    const message = item.customerNoticeCategory ? 'По ювелирным изделиям нужно написать письмо' : 'По золоту нужно написать письмо';
+    details.append(el('p','gold-letter-notice',message));
+  }
   if (item.customerNotice) {
     const notice = el('section','customer-notice');
-    notice.append(el('h3','','Сообщение для клиентов'));
+    notice.append(el('h3','',item.customerNoticeCategory || 'Сообщение для клиентов'));
     for (const paragraph of item.customerNotice.split(/\r?\n\s*\r?\n/)) notice.append(el('p','',paragraph));
     details.append(notice);
-  }
-  if (item.goldLetterRequired) {
-    details.append(el('p','gold-letter-notice','По золоту нужно написать письмо'));
   }
   const goodsMoves = item.status==='moved' && steps.some((step) =>
     step.pending || /техник|мехов|текстиль|^залоги, кроме/i.test(step.category));
