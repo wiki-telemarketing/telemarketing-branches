@@ -351,14 +351,20 @@ function renderDetails(item) {
     for (const paragraph of item.customerNotice.split(/\r?\n\s*\r?\n/)) notice.append(el('p','',paragraph));
     details.append(notice);
   }
-  const goodsMoves = item.status==='moved' && steps.some((step) =>
-    step.pending || /техник|мехов|текстиль|^залоги, кроме/i.test(step.category));
+  const destinationByCategory = new Map(item.steps
+    .filter((step) => step.category && step.category!=='Витрина' && step.name && !step.pending)
+    .map((step) => [step.category,step.id || norm(step.name)]));
+  const splitPledges = item.status==='moved' && new Set(destinationByCategory.values()).size > 1;
+  const goodsMoves = splitPledges || (item.status==='moved' && steps.some((step) =>
+    step.pending || /техник|мехов|текстиль|^залоги, кроме/i.test(step.category)));
   if (!goodsMoves) details.append(fields,actions);
   if (steps.length) {
     const moves = el('section',goodsMoves ? 'history goods-history' : 'history');
     const heading = goodsMoves ? 'Распределение залогов'
       : item.status==='planned' ? 'Куда планируется переезд' : 'История переезда';
     moves.append(el('h3','',heading));
+    if (splitPledges) moves.append(el('p','pledge-reminder',
+      'Перед тем как назвать адрес, уточните, какое изделие клиент хочет выкупить.'));
     for (const s of steps) {
       const step = el('div',s.pending ? 'step step-pending' : 'step');
       const note = [s.category,moveDate(s)].filter(Boolean).join(' · ');
