@@ -27,7 +27,7 @@ const time = new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit',hour
 const mobile = matchMedia('(max-width:750px)');
 const storageKey = 'mgkl-snapshot-v2';
 const addressCache = new Map();
-const state = {entries:[], sorted:[], indexed:[], stations:[], results:[], status:'all', type:'', acceptance:'', purchase:'',
+const state = {entries:[], sorted:[], indexed:[], stations:[], results:[], status:'all', type:'', service:'',
   origin:null, detailId:null, suggestions:[], focused:-1, geocodeSerial:0, lastData:null, tileUrl:null};
 let map, tiles, cluster, originMarker, toastTimer, tileTimer;
 let markers = new Map();
@@ -98,8 +98,9 @@ function rankFields(fields, query) {
 const field = (value,weight) => [norm(value),searchTerms(value),weight];
 const acceptedCategories = (item) => item.accepted ? [...item.accepted.basic,...item.accepted.extra] : [];
 const matchesFilters = (item) => (!state.type || item.type === state.type) &&
-  (!state.acceptance || acceptedCategories(item).includes(state.acceptance)) &&
-  (!state.purchase || item.accepted?.sales?.includes(state.purchase));
+  (!state.service ||
+    item.accepted?.sales?.some((category) => 'sale:'+category === state.service) ||
+    acceptedCategories(item).some((category) => 'accept:'+category === state.service));
 const shown = (item) => matchesFilters(item) &&
   (state.status === 'all' || item.status === state.status);
 
@@ -615,7 +616,17 @@ function ingest(data) {
   const types = [...new Set(state.entries.map((item) => item.type))].sort(locale.compare);
   const categories = [...new Set(state.entries.flatMap(acceptedCategories))].sort(locale.compare);
   state.type = setFilterOptions('branch-type','Все типы',types,state.type);
-  state.acceptance = setFilterOptions('acceptance-filter','Что принимают',categories,state.acceptance);
+  const acceptance = $('acceptance-options');
+  acceptance.replaceChildren(...categories.map((category) => {
+    const option = el('option','',category);
+    option.value = 'accept:'+category;
+    return option;
+  }));
+  acceptance.hidden = !categories.length;
+  const serviceFilter = $('service-filter');
+  serviceFilter.value = state.service;
+  if (serviceFilter.selectedIndex < 0) serviceFilter.value = '';
+  state.service = serviceFilter.value;
   if (previous) {
     const current = data.entries.find((item) => item.name===previous.name && item.address===previous.address && item.type===previous.type);
     if (current) {state.detailId=current.id;renderDetails(current);}
@@ -699,24 +710,19 @@ $('search-form').addEventListener('submit',(event) => {
 $('clear').addEventListener('click',() => {$('search').value='';resetInput();hideSuggestions();$('search').focus();});
 document.addEventListener('pointerdown',(event) => {if (!$('search-form').contains(event.target)) hideSuggestions();});
 $('branch-type').addEventListener('change',() => {state.type=$('branch-type').value;showResults();render();});
-for (const name of ['acceptance','purchase']) {
-  const filter = $(name+'-filter');
-  filter.addEventListener('change',() => {
-    state[name]=filter.value;
-    if (state[name]) state.status='active';
-    showResults();
-    render();
-  });
-}
+$('service-filter').addEventListener('change',() => {
+  state.service=$('service-filter').value;
+  if (state.service) state.status='active';
+  showResults();
+  render();
+});
 $('reset-map').addEventListener('click',() => {
   $('search').value='';
   state.status='all';
   state.type='';
-  state.acceptance='';
-  state.purchase='';
+  state.service='';
   $('branch-type').value='';
-  $('acceptance-filter').value='';
-  $('purchase-filter').value='';
+  $('service-filter').value='';
   resetInput();
   resetMap();
 });
