@@ -8,8 +8,8 @@
   <meta name="theme-color" content="#172633">
   <title>Справочник отделений · МГКЛ</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="./styles.css?v=service-filter">
-  <script defer src="./app.js?v=service-filter"></script>
+  <link rel="stylesheet" href="./styles.css?v=service-groups">
+  <script defer src="./app.js?v=service-groups"></script>
 </head>
 <body>
   <header class="topbar">
@@ -37,12 +37,24 @@
               <span class="visually-hidden">Услуга отделения</span>
               <select id="service-filter">
                 <option value="">Фильтр не выбран</option>
-                <optgroup label="Клиент хочет купить">
-                  <option value="sale:Ювелирное изделие">Ювелирное изделие</option>
-                  <option value="sale:Меховые изделия">Меховые изделия</option>
-                  <option value="sale:Техника">Техника</option>
+                <optgroup label="Клиент хочет заложить или продать">
+                  <option value="pledge-jewelry">Залог/Скупка ювелирных изделий</option>
+                  <option value="pledge-tech">Залог/Скупка техники</option>
+                  <option value="pledge-fur">Залог/Скупка меха и кожи</option>
+                  <option value="pledge-large">Залог/Скупка крупногабарита (до 25 кг / 49+ дюймов)</option>
+                  <option value="pledge-medium">Залог/Скупка среднегабарита (5–15 кг / до 48 дюймов)</option>
                 </optgroup>
-                <optgroup id="acceptance-options" label="Что принимают" hidden></optgroup>
+                <optgroup label="Клиент хочет купить">
+                  <option value="buy-jewelry">Покупка ювелирных изделий</option>
+                  <option value="buy-tech">Покупка техники</option>
+                  <option value="buy-fur">Покупка меха и кожи</option>
+                </optgroup>
+                <optgroup label="Дополнительно">
+                  <option value="strollers">Детские коляски</option>
+                  <option value="tires">Шины и диски</option>
+                  <option value="coins">Инвестиционные монеты</option>
+                  <option value="consignment">Комиссионный магазин</option>
+                </optgroup>
               </select>
             </label>
           </div>

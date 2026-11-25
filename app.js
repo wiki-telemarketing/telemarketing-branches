@@ -97,10 +97,32 @@ function rankFields(fields, query) {
 
 const field = (value,weight) => [norm(value),searchTerms(value),weight];
 const acceptedCategories = (item) => item.accepted ? [...item.accepted.basic,...item.accepted.extra] : [];
+const acceptedServices = {
+  'pledge-jewelry': ['Золото','Серебро','Займы под залог золота','Займы под залог серебра','Скупка золота и серебра'],
+  'pledge-tech': ['Электроника','Займы под залог электроники','Скупка электроники и бытовой техники'],
+  'pledge-fur': ['Займы под залог меха и кожи','Скупка меха и кожи'],
+  'pledge-large': ['Займы крупногабаритных товаров','Скупка крупногабаритных товаров'],
+  'pledge-medium': ['Займы среднегабаритных товаров','Скупка среднегабаритных товаров'],
+  strollers: ['Детские коляски'],
+  tires: ['Шины и диски'],
+  coins: ['Инвестиционные монеты'],
+  consignment: ['Комиссионный магазин'],
+};
+const saleServices = {
+  'buy-jewelry': 'Ювелирное изделие',
+  'buy-tech': 'Техника',
+  'buy-fur': 'Меховые изделия',
+};
+
+function matchesService(item, service) {
+  if (!service) return true;
+  if (saleServices[service]) return item.accepted?.sales?.includes(saleServices[service]);
+  const categories = acceptedServices[service];
+  return acceptedCategories(item).some((category) => categories.includes(category.split(' (',1)[0]));
+}
+
 const matchesFilters = (item) => (!state.type || item.type === state.type) &&
-  (!state.service ||
-    item.accepted?.sales?.some((category) => 'sale:'+category === state.service) ||
-    acceptedCategories(item).some((category) => 'accept:'+category === state.service));
+  matchesService(item,state.service);
 const shown = (item) => matchesFilters(item) &&
   (state.status === 'all' || item.status === state.status);
 
@@ -614,19 +636,7 @@ function ingest(data) {
     ...item.steps.flatMap((s) => [field(s.name,12),field(s.address,14)]),
   ]}));
   const types = [...new Set(state.entries.map((item) => item.type))].sort(locale.compare);
-  const categories = [...new Set(state.entries.flatMap(acceptedCategories))].sort(locale.compare);
   state.type = setFilterOptions('branch-type','Все типы',types,state.type);
-  const acceptance = $('acceptance-options');
-  acceptance.replaceChildren(...categories.map((category) => {
-    const option = el('option','',category);
-    option.value = 'accept:'+category;
-    return option;
-  }));
-  acceptance.hidden = !categories.length;
-  const serviceFilter = $('service-filter');
-  serviceFilter.value = state.service;
-  if (serviceFilter.selectedIndex < 0) serviceFilter.value = '';
-  state.service = serviceFilter.value;
   if (previous) {
     const current = data.entries.find((item) => item.name===previous.name && item.address===previous.address && item.type===previous.type);
     if (current) {state.detailId=current.id;renderDetails(current);}
