@@ -264,15 +264,23 @@ function toRoute(item, point) {
   return url.href;
 }
 
-function history(item, visited = new Set(), depth = 0) {
+function finalDestinations(item, visited = new Set(), depth = 0) {
   if (visited.has(item.id) || depth>8) return [];
   const path = new Set(visited).add(item.id);
   const steps = item.steps.filter((s) => s.category || !item.steps.some((x) => x.category && (x.id ? x.id===s.id : x.name===s.name)));
-  return steps.flatMap((s) => {
-    const target = s.id && state.entries.find(({id}) => id===s.id);
-    const details = !s.pending && target?.status==='moved' && !steps.some((later) => target.steps.some((next) =>
-      later !== s && later.id && later.id === next.id && (later.date === next.date || !next.date)));
-    return [s,...(details ? history(target,path,depth+1) : [])];
+  return steps.flatMap((step) => {
+    const target = step.id && state.entries.find(({id}) => id===step.id);
+    if (step.pending || target?.status!=='moved') return [step];
+    const onward = finalDestinations(target,path,depth+1).filter((next) =>
+      !step.category || !next.category || norm(step.category)===norm(next.category));
+    if (!onward.length) return [{name:'',address:'',date:'',category:step.category}];
+    return onward.map((next) => {
+      const category = next.category || step.category;
+      const recorded = next.id && steps.find((option) => option!==step && option.id===next.id &&
+        option.pending===next.pending && option.category===category &&
+        (!next.date || option.date===next.date));
+      return recorded || {...next,category};
+    });
   }).filter((s,i,all) => !all.slice(0,i).some((x) => x.name===s.name && x.date===s.date &&
     x.category===s.category && x.pending===s.pending));
 }
@@ -312,11 +320,14 @@ function renderDetails(item) {
   nav.append(button('back','К списку',() => {showResults();render();$('search').focus();}));
   nav.append(badge(item.status));
   const title = el('h2','detail-title',item.name);
+  const steps = finalDestinations(item);
   const fields = el('dl','fields');
   const addressFields = item.mapAddress ? [['Адрес на карте',item.mapAddress],['Адрес в таблице',item.address]]
     : [[item.status==='moved' || item.status==='closed' ? 'Прежний адрес' : 'Адрес',item.address]];
   const fieldPairs = [...addressFields,['Метро / ж. д.',item.metro],['Режим работы',item.hours],['Тип',item.type]];
-  if (item.date && ['moved','planned'].includes(item.status)) fieldPairs.push(['Дата переезда',item.date]);
+  if (item.date && ['moved','planned'].includes(item.status) && steps.every((step) => step.date===item.date)) {
+    fieldPairs.push(['Дата переезда',item.date]);
+  }
   for (const [name,value] of fieldPairs) {
     if (!value) continue;
     const field = el('div');
@@ -325,7 +336,6 @@ function renderDetails(item) {
   }
   const actions = el('div','detail-actions');
   if (item.address) actions.append(button('action','Скопировать адрес',() => copy(item.mapAddress || item.address,'Адрес скопирован'),'copy'));
-  const steps = history(item);
   actions.append(button('action','Скопировать информацию',() => {
     copy([item.name,statusName[item.status],...fieldPairs.filter(([,value]) => value).map(([n,v]) => n+' — '+v),
       ...steps.map((s) => [s.category,moveDate(s),moveDestination(s),s.address].filter(Boolean).join(' · ')),
@@ -351,7 +361,7 @@ function renderDetails(item) {
     for (const paragraph of item.customerNotice.split(/\r?\n\s*\r?\n/)) notice.append(el('p','',paragraph));
     details.append(notice);
   }
-  const destinationByCategory = new Map(item.steps
+  const destinationByCategory = new Map(steps
     .filter((step) => step.category && step.category!=='Витрина' && step.name && !step.pending)
     .map((step) => [step.category,step.id || norm(step.name)]));
   const splitPledges = item.status==='moved' && new Set(destinationByCategory.values()).size > 1;
@@ -361,7 +371,7 @@ function renderDetails(item) {
   if (steps.length) {
     const moves = el('section',goodsMoves ? 'history goods-history' : 'history');
     const heading = goodsMoves ? 'Распределение залогов'
-      : item.status==='planned' ? 'Куда планируется переезд' : 'История переезда';
+      : item.status==='planned' ? 'Куда планируется переезд' : 'Куда переехало отделение';
     moves.append(el('h3','',heading));
     if (splitPledges) moves.append(el('p','pledge-reminder',
       'Уточните у клиента, какое изделие он закладывал.'));
