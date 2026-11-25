@@ -164,7 +164,8 @@ export function parseDirectory(bytes, coordinates = {}) {
     const note = noticeSection ? comment.slice(noticeSection[0].length) : noticeAfterGoldInstruction?.[1] ?? comment;
     const goldLetterRequired = note.split(/\r?\n/).some((line) =>
       /(?:ювелирные изделия|по золоту)\s*[:–—-]?\s*(?:пишем|(?:нужно|необходимо)\s+(?:писать|написать|отправить))\s+письмо(?:[.,;! ]|$)/i.test(line.trim()));
-    const date = note.match(/\b\d{1,2}\.\d{1,2}\.\d{2,4}\b/)?.[0] ?? '';
+    const initialNote = note.split(/^[ \t]*Далее(?=[ \t:]|$)/im, 1)[0];
+    const date = initialNote.match(/\b\d{1,2}\.\d{1,2}\.\d{2,4}\b/)?.[0] ?? '';
     const status = /временно приостановил[аои]? работу/i.test(customerNotice)
       ? 'suspended' : classify(note, color, date);
     const location = status === 'active' ? coordinates[address] : undefined;
