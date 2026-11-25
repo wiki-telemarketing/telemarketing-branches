@@ -8,8 +8,8 @@
   <meta name="theme-color" content="#172633">
   <title>Справочник отделений · МГКЛ</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="./styles.css?v=pledge-reminder">
-  <script defer src="./app.js?v=final-destinations"></script>
+  <link rel="stylesheet" href="./styles.css?v=purchase-filter">
+  <script defer src="./app.js?v=purchase-filter"></script>
 </head>
 <body>
   <header class="topbar">
@@ -34,6 +34,15 @@
           <div class="result-filters">
             <label class="type-filter"><span class="visually-hidden">Тип отделения</span><select id="branch-type"><option value="">Все типы</option></select></label>
             <label class="type-filter"><span class="visually-hidden">Что принимают</span><select id="acceptance-filter"><option value="">Что принимают</option></select></label>
+            <label class="type-filter">
+              <span class="visually-hidden">Клиент хочет купить</span>
+              <select id="purchase-filter">
+                <option value="">Клиент хочет купить</option>
+                <option>Ювелирное изделие</option>
+                <option>Меховые изделия</option>
+                <option>Техника</option>
+              </select>
+            </label>
           </div>
         </div>
       </div>

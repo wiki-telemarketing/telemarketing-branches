@@ -61,22 +61,27 @@ export function parseAcceptance(bytes) {
   const [header,...rows] = readWorkbook(bytes,'Приём по отделениям');
   const columns = ['A','B','C','D','E','F'];
   const titles = ['Отделение','Адрес','Базовые категории','Расширенные категории','Источник','Проверено'];
-  if (columns.some((col,i) => header?.value(col) !== titles[i])) throw new Error('unexpected acceptance columns');
+  const salesHeader = header?.value('G');
+  if (columns.some((col,i) => header?.value(col) !== titles[i]) || (salesHeader && salesHeader !== 'Продажа')) {
+    throw new Error('unexpected acceptance columns');
+  }
   const categories = (s) => [...new Set(clean(s).split(/[;\r\n]+/).map((x) => publishable(x,150)).filter(Boolean))];
+  const saleCategories = new Set(['Ювелирное изделие','Меховые изделия','Техника']);
   const accepted = new Map();
   for (const {value} of rows) {
     const name = publishable(value('A'),150);
     const address = publishable(value('B'),350);
     const basic = categories(value('C'));
     const extra = categories(value('D'));
-    if (!name || !address || (!basic.length && !extra.length)) continue;
+    const sales = salesHeader ? categories(value('G')).filter((category) => saleCategories.has(category)) : [];
+    if (!name || !address || (!basic.length && !extra.length && !sales.length)) continue;
     const url = clean(value('E'));
     const source = /^https:\/\/(?:www\.)?mosgorlombard\.ru\/o-kompanii\/contacts\/[a-z0-9_-]+\/?$/i.test(url) ? url : '';
     const date = clean(value('F')).replace(/^(\d{2})\.(\d{2})\.(\d{4})$/,'$3-$2-$1');
     const checkedOn = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : '';
     const key = branchKey({name,address});
     if (accepted.has(key)) throw new Error('duplicate branch acceptance row');
-    accepted.set(key,{basic,extra,source,checkedOn});
+    accepted.set(key,{basic,extra,source,checkedOn,...(sales.length ? {sales} : {})});
   }
   return accepted;
 }

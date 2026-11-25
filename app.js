@@ -27,7 +27,7 @@ const time = new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit',hour
 const mobile = matchMedia('(max-width:750px)');
 const storageKey = 'mgkl-snapshot-v2';
 const addressCache = new Map();
-const state = {entries:[], sorted:[], indexed:[], stations:[], results:[], status:'all', type:'', acceptance:'',
+const state = {entries:[], sorted:[], indexed:[], stations:[], results:[], status:'all', type:'', acceptance:'', purchase:'',
   origin:null, detailId:null, suggestions:[], focused:-1, geocodeSerial:0, lastData:null, tileUrl:null};
 let map, tiles, cluster, originMarker, toastTimer, tileTimer;
 let markers = new Map();
@@ -98,7 +98,8 @@ function rankFields(fields, query) {
 const field = (value,weight) => [norm(value),searchTerms(value),weight];
 const acceptedCategories = (item) => item.accepted ? [...item.accepted.basic,...item.accepted.extra] : [];
 const matchesFilters = (item) => (!state.type || item.type === state.type) &&
-  (!state.acceptance || acceptedCategories(item).includes(state.acceptance));
+  (!state.acceptance || acceptedCategories(item).includes(state.acceptance)) &&
+  (!state.purchase || item.accepted?.sales?.includes(state.purchase));
 const shown = (item) => matchesFilters(item) &&
   (state.status === 'all' || item.status === state.status);
 
@@ -291,7 +292,7 @@ const moveDestination = (step) => step.name || 'Отделение назнач�
 function renderAcceptance(accepted) {
   const section = el('section','branch-acceptance');
   section.append(el('h3','','Что принимает отделение'));
-  if (!accepted) {
+  if (!accepted?.basic.length && !accepted?.extra.length) {
     section.append(el('p','','Категории для этого адреса пока не подтверждены.'));
     return section;
   }
@@ -387,7 +388,16 @@ function renderDetails(item) {
     details.append(moves);
   }
   if (goodsMoves) details.append(fields,actions);
-  if (item.status==='active') details.append(renderAcceptance(item.accepted));
+  if (item.status==='active') {
+    details.append(renderAcceptance(item.accepted));
+    if (item.accepted?.sales?.length) {
+      const sale = el('section','branch-acceptance');
+      const list = el('ul');
+      list.append(...item.accepted.sales.map((category) => el('li','',category)));
+      sale.append(el('h3','','Что продают'),list);
+      details.append(sale);
+    }
+  }
   if (item.status==='review') details.append(el('p','empty','В таблице требуется уточнить статус отделения.'));
   if (item.address) {
     const extra = el('div','nearby-action');
@@ -689,19 +699,24 @@ $('search-form').addEventListener('submit',(event) => {
 $('clear').addEventListener('click',() => {$('search').value='';resetInput();hideSuggestions();$('search').focus();});
 document.addEventListener('pointerdown',(event) => {if (!$('search-form').contains(event.target)) hideSuggestions();});
 $('branch-type').addEventListener('change',() => {state.type=$('branch-type').value;showResults();render();});
-$('acceptance-filter').addEventListener('change',() => {
-  state.acceptance=$('acceptance-filter').value;
-  if (state.acceptance) state.status='active';
-  showResults();
-  render();
-});
+for (const name of ['acceptance','purchase']) {
+  const filter = $(name+'-filter');
+  filter.addEventListener('change',() => {
+    state[name]=filter.value;
+    if (state[name]) state.status='active';
+    showResults();
+    render();
+  });
+}
 $('reset-map').addEventListener('click',() => {
   $('search').value='';
   state.status='all';
   state.type='';
   state.acceptance='';
+  state.purchase='';
   $('branch-type').value='';
   $('acceptance-filter').value='';
+  $('purchase-filter').value='';
   resetInput();
   resetMap();
 });
