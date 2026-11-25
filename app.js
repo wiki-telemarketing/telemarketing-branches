@@ -364,7 +364,7 @@ function renderDetails(item) {
       : item.status==='planned' ? 'Куда планируется переезд' : 'История переезда';
     moves.append(el('h3','',heading));
     if (splitPledges) moves.append(el('p','pledge-reminder',
-      'Перед тем как назвать адрес, уточните, какое изделие клиент хочет выкупить.'));
+      'Уточните у клиента, какое изделие он закладывал.'));
     for (const s of steps) {
       const step = el('div',s.pending ? 'step step-pending' : 'step');
       const note = [s.category,moveDate(s)].filter(Boolean).join(' · ');
