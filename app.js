@@ -337,6 +337,34 @@ function renderAcceptance(accepted) {
   return section;
 }
 
+function renderWalkingDirections(item) {
+  const walking = item.walking;
+  const section = el('section','branch-acceptance branch-directions');
+  section.append(el('h3','','Как пройти'));
+  if (walking?.paragraphs.length) {
+    section.append(...walking.paragraphs.map((paragraph) => el('p','',paragraph)));
+  } else {
+    section.append(el('p','',walking?.source
+      ? 'В официальной карточке нет описания прохода.'
+      : 'Описание прохода пока не добавлено.'));
+    if (item.address) {
+      const route = el('a','','Построить маршрут');
+      route.href = toRoute(item,state.origin?.point);
+      route.target = '_blank';
+      route.rel = 'noopener noreferrer';
+      section.append(route);
+    }
+  }
+  if (walking?.source) {
+    const link = el('a','','Карточка Мосгорломбарда');
+    link.href = walking.source;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    section.append(link);
+  }
+  return section;
+}
+
 function renderDetails(item) {
   const details = $('details');
   const nav = el('div','detail-nav');
@@ -437,6 +465,7 @@ function renderDetails(item) {
     if (item.point && mobile.matches) extra.append(el('br'),button('text-action','Показать на карте',() => setView('map')));
     details.append(extra);
   }
+  if (item.status==='active') details.append(renderWalkingDirections(item));
   $('list-area').hidden = true;
   details.hidden = false;
   details.scrollTop = 0;

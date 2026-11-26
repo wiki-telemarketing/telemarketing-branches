@@ -33,9 +33,9 @@ async function downloadSheet(url,title) {
 
 const acceptanceSource = new URL(source);
 acceptanceSource.searchParams.set('gid','1327834426');
-const [workbook,acceptanceWorkbook,coordinates,stations] = await Promise.all([
+const [workbook,acceptanceWorkbook,coordinates,stations,directions] = await Promise.all([
   downloadSheet(source,'Переезды'),downloadSheet(acceptanceSource,'Приём по отделениям'),
-  ...['coordinates','stations'].map(async (name) => JSON.parse(await readFile(name+'.json','utf8'))),
+  ...['coordinates','stations','directions'].map(async (name) => JSON.parse(await readFile(name+'.json','utf8'))),
 ]);
 let entries;
 let acceptedByBranch;
@@ -45,10 +45,15 @@ try {
 } catch {
   throw new Error('A source worksheet has an unexpected format.');
 }
+const directionsByBranch = new Map(directions.map(({name,address,source,paragraphs}) =>
+  [branchKey({name,address}),{source,paragraphs}]));
 for (const item of entries) {
   if (item.status !== 'active') continue;
-  const accepted = acceptedByBranch.get(branchKey(item));
+  const key = branchKey(item);
+  const accepted = acceptedByBranch.get(key);
   if (accepted) item.accepted = accepted;
+  const walking = directionsByBranch.get(key);
+  if (walking) item.walking = walking;
 }
 const data = {entries, stations, updatedAt:new Date().toISOString(),
   tileUrl:'https://tile.openstreetmap.org/{z}/{x}/{y}.png'};

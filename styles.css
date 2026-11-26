@@ -90,6 +90,9 @@ h1{font-size:clamp(1.9rem,3vw,2.45rem);letter-spacing:-.055em;line-height:1.12;m
 .branch-acceptance p,.branch-acceptance ul{font-size:.88rem;margin:0 0 7px}
 .branch-acceptance ul{padding-left:19px}
 .branch-acceptance a{font-size:.81rem}
+.branch-directions{border-left:3px solid var(--accent)}
+.branch-directions p{line-height:1.5}
+.branch-directions a+a{margin-left:12px}
 .action{border:1px solid #cbd8dd;background:white;color:var(--ink);display:inline-flex;align-items:center;gap:6px;text-decoration:none;border-radius:8px;padding:8px 10px;font-size:.84rem;font-weight:680}
 .action:hover{background:#eff7f5}
 .action.primary-action{background:var(--accent);color:white;border-color:var(--accent)}
