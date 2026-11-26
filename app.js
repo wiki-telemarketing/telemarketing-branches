@@ -27,7 +27,7 @@ const time = new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit',hour
 const mobile = matchMedia('(max-width:750px)');
 const storageKey = 'mgkl-snapshot-v2';
 const addressCache = new Map();
-const state = {entries:[], sorted:[], indexed:[], stations:[], results:[], status:'all', type:'', service:'',
+const state = {entries:[], sorted:[], indexed:[], stations:[], results:[], status:'all', service:'',
   origin:null, detailId:null, suggestions:[], focused:-1, geocodeSerial:0, lastData:null, tileUrl:null};
 let map, tiles, cluster, originMarker, toastTimer, tileTimer;
 let markers = new Map();
@@ -121,9 +121,7 @@ function matchesService(item, service) {
   return acceptedCategories(item).some((category) => categories.includes(category.split(' (',1)[0]));
 }
 
-const matchesFilters = (item) => (!state.type || item.type === state.type) &&
-  matchesService(item,state.service);
-const shown = (item) => matchesFilters(item) &&
+const shown = (item) => matchesService(item,state.service) &&
   (state.status === 'all' || item.status === state.status);
 
 function computeResults() {
@@ -138,9 +136,10 @@ function computeResults() {
 
 function renderFilters() {
   const counts = Object.fromEntries(Object.keys(statusName).map((status) => [status,0]));
-  for (const item of state.entries) if (matchesFilters(item)) counts[item.status]++;
-  const statuses = ['all','active','moved','closed',...['suspended','planned','review'].filter((s) => counts[s] || state.status===s)];
+  for (const item of state.entries) if (matchesService(item,state.service)) counts[item.status]++;
+  const statuses = ['all', ...Object.keys(counts).filter((status) => counts[status] > 0)];
   counts.all = Object.values(counts).reduce((a,b) => a+b,0);
+  if (!statuses.includes(state.status)) state.status = 'all';
   for (const old of $('filters').children) old.dataset.existing = 'true';
   for (const status of statuses) {
     let chip = $('filters').querySelector('[data-filter="'+status+'"]');
@@ -612,17 +611,6 @@ function resetMap() {
   else map.setView([55.751,37.62],10);
 }
 
-function setFilterOptions(id,placeholder,choices,value) {
-  const select = $(id);
-  select.replaceChildren(...['',...choices].map((choice) => {
-    const option = el('option','',choice || placeholder);
-    option.value = choice;
-    return option;
-  }));
-  select.value = choices.includes(value) ? value : '';
-  return select.value;
-}
-
 function ingest(data) {
   const previous = state.entries.find((item) => item.id===state.detailId);
   const first = !state.lastData;
@@ -635,8 +623,6 @@ function ingest(data) {
     ...(item.mapAddress ? [field(item.mapAddress,4)] : []),
     ...item.steps.flatMap((s) => [field(s.name,12),field(s.address,14)]),
   ]}));
-  const types = [...new Set(state.entries.map((item) => item.type))].sort(locale.compare);
-  state.type = setFilterOptions('branch-type','Все типы',types,state.type);
   if (previous) {
     const current = data.entries.find((item) => item.name===previous.name && item.address===previous.address && item.type===previous.type);
     if (current) {state.detailId=current.id;renderDetails(current);}
@@ -719,7 +705,6 @@ $('search-form').addEventListener('submit',(event) => {
 });
 $('clear').addEventListener('click',() => {$('search').value='';resetInput();hideSuggestions();$('search').focus();});
 document.addEventListener('pointerdown',(event) => {if (!$('search-form').contains(event.target)) hideSuggestions();});
-$('branch-type').addEventListener('change',() => {state.type=$('branch-type').value;showResults();render();});
 $('service-filter').addEventListener('change',() => {
   state.service=$('service-filter').value;
   if (state.service) state.status='active';
@@ -729,9 +714,7 @@ $('service-filter').addEventListener('change',() => {
 $('reset-map').addEventListener('click',() => {
   $('search').value='';
   state.status='all';
-  state.type='';
   state.service='';
-  $('branch-type').value='';
   $('service-filter').value='';
   resetInput();
   resetMap();
